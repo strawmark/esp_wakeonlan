@@ -42,9 +42,6 @@
       justify-content: center;
       gap: 14px;
       padding: 12px;
-
-
-
     }
 
     button {
@@ -69,15 +66,15 @@
   <header>Wake-On-LAN</header>
   <main>
     <div class="buttons">
-      <form action="/wake" method="post">
+      <form action="/wakeonlan/wake" method="post">
         <input type="hidden" name="device" value="0">
         <button type="submit">Accendi PC Glottis</button>
       </form>
-      <form action="/wake" method="post">
+      <form action="/wakeonlan/wake" method="post">
         <input type="hidden" name="device" value="1">
         <button type="submit" class="button">Accendi PC BlueCasket</button>
       </form>
-      <form action="/wake" method="post">
+      <form action="/wakeonlan/wake" method="post">
         <input type="hidden" name="device" value="2">
         <button type="submit" class="button">Accendi PC Guybrush</button>
       </form>

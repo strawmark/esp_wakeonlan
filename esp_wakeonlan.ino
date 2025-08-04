@@ -7,6 +7,8 @@
 #include "webpages.h"
 #include "config.h"
 
+const char* root = "/wakeonlan/";
+
 WiFiUDP UDP;
 WakeOnLan WOL(UDP);
 AsyncWebServer server(80);
@@ -18,20 +20,19 @@ void wakePC(int index) {
 }
 
 void setup() {
-    Serial.begin(115200);
     WiFi.begin(SSID, NET_PASSWORD);
     
     while (WiFi.status() != WL_CONNECTED) {}
     
     // Server routes
 
-    // 404 Not Found
+    // Index instead of 404 Not Found 
     server.onNotFound([](AsyncWebServerRequest *request) {
-        request->send(404, "text/plain", "Error 404");
+        request->send_P(200,"text/html",INDEX_HTML,NULL);
     });
 
     // Index page
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    server.on(root, HTTP_GET, [](AsyncWebServerRequest *request) {
         if(!request->authenticate(USERNAME,ESP_PASSWORD))
             return request->requestAuthentication();
         request->send_P(200,"text/html",INDEX_HTML,NULL);
@@ -50,10 +51,13 @@ void setup() {
                 return request->send(400, "text/plain", "Invalid device index");
             
             wakePC(device_index);
-            return request->redirect("/");
+
+            return request->redirect(root);
+            
         } else {
             return request->send(400, "text/plain", "Device parameter missing");
         }
+
     });
 
     server.begin();
