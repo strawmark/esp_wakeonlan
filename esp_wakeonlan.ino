@@ -7,7 +7,6 @@
 #include "webpages.h"
 #include "config.h"
 
-const char* root = "/wakeonlan/";
 
 WiFiUDP UDP;
 WakeOnLan WOL(UDP);
@@ -50,7 +49,10 @@ void setup() {
             if (device_index < 0 || device_index >= sizeof(MACAddress) / sizeof(MACAddress[0]))
                 return request->send(400, "text/plain", "Invalid device index");
             
-            wakePC(device_index);
+            for(int i = 0; i < 3; i++) { // Repeat to ensure the device wakes up
+                wakePC(device_index);
+                delay(100);
+            }
 
             return request->redirect(root);
             
