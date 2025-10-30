@@ -14,3 +14,7 @@ const char* MACAddress[] = {
   "00:00:00:00:00:00", // Device 0
   "00:00:00:00:00:00" // Device 1
 };
+
+// Reverse proxy configuration
+
+const char* root = "/wakeonlan/";

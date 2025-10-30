@@ -4,3 +4,9 @@ This project starts a web server hosting a simple webpage that allows users to s
 - The `config.h` file contains hardcoded values for SSID, password, and the MAC addresses of the devices to wake. These settings must be configured before flashing the code to the ESP32 board.
 - The `webpages.h` file defines the constant string representing the HTML content served by the web server. The original HTML source is located in the `web/` directory.
 - To ensure external accessibility, set a static lease for the ESP32 on your router and configure a port forwarding rule from a WAN port to port 80 on the ESP32.
+
+## Required libraries
+
+- AsyncTCP (3.4.8) by ESP32Async
+- ESP Async WebServer (3.8.1) by ESP32Async
+- WakeOnLan (1.1.7) by a7dm0
