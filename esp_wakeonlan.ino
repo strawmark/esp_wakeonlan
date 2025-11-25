@@ -13,7 +13,7 @@ WakeOnLan WOL(UDP);
 AsyncWebServer server(80);
 
 void wakePC(int index) {
-    WOL.setRepeat(3, 100);
+    WOL.setRepeat(3, 1500);
     WOL.calculateBroadcastAddress(WiFi.localIP(), WiFi.subnetMask());
     WOL.sendMagicPacket(MACAddress[index], WAKEONLAN_PORT);
 }
@@ -48,11 +48,6 @@ void setup() {
 
             if (device_index < 0 || device_index >= sizeof(MACAddress) / sizeof(MACAddress[0]))
                 return request->send(400, "text/plain", "Invalid device index");
-            
-            for(int i = 0; i < 3; i++) { // Repeat to ensure the device wakes up
-                wakePC(device_index);
-                delay(100);
-            }
 
             return request->redirect(root);
             
