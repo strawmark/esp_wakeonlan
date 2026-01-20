@@ -1,0 +1,20 @@
+// WiFi connection setup
+#define SSID ""
+#define NET_PASSWORD ""
+
+// ESP32 server access setup
+#define USERNAME ""
+#define ESP_PASSWORD ""
+
+// Wake On LAN devices
+
+#define WAKEONLAN_PORT 9
+
+const char* MACAddress[] = {
+  "00:00:00:00:00:00", // (0)
+  "00:00:00:00:00:00", // (1)
+  "00:00:00:00:00:00", // (2)
+  "00:00:00:00:00:00" // (3)
+};
+
+const char* root = "/wakeonlan/";

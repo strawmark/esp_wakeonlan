@@ -51,14 +51,10 @@ void setup() {
     });
     // Index page
     server.on(root, HTTP_GET, [](AsyncWebServerRequest *request) {
-        if(!request->authenticate(USERNAME,ESP_PASSWORD))
-            return request->requestAuthentication();
         request->send_P(200,"text/html",INDEX_HTML,NULL);
     });
     // Wake on LAN endpoint
     server.on("/wake", HTTP_POST, [](AsyncWebServerRequest *request) {
-        if(!request->authenticate(USERNAME,ESP_PASSWORD))
-            return request->requestAuthentication();
         if (request->hasParam("device", true)) {
             int device_index = request->getParam("device", true)->value().toInt();
             if (device_index < 0 || device_index >= sizeof(MACAddress) / sizeof(MACAddress[0]))
