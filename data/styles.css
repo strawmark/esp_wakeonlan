@@ -76,7 +76,7 @@ button:hover {
 }
 
 footer {
-  position: fixed;
+    position: fixed;
   bottom: 0;
   width: 100%;
   text-align: center;
@@ -89,4 +89,16 @@ footer {
   footer {
     display: none;
   }
+}
+
+#status{
+  margin: 0.5rem 0;
+}
+
+.idle{
+    color: var (--header-txt);
+}
+
+.sending{
+    color: green
 }

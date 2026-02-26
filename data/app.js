@@ -25,19 +25,27 @@ async function wakePC(index){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({device:index})
     });
+    
     if(!res.ok) throw new Error('Error');
-    const data=await res.json();
-    console.log(data);
-  }catch(e){console.error(e);} 
+    
+  } catch(e) {console.error(e);} 
 }
 
 async function updateStatus(){
   try{
-    const res=await fetch('/api/status');
+    const res = await fetch('/api/status');
+  
     if(!res.ok) throw new Error('Error');
-    const data=await res.json();
-    document.getElementById('status').textContent=`Status: ${data.sending?'sending':'idle'} (packets ${data.packetsSent})`;
-  }catch(e){console.error(e);} 
+  
+    const data = await res.json();  
+    const statusElement = document.getElementById('status');
+    
+    statusElement.textContent = `Status: ${data.sending?'invio':'pronto'} (pacchetto ${data.packetsSent})`;
+    statusElement.className = data.sending?'sending':'idle';
+
+  } catch(e) {
+    console.error(e);
+  } 
 }
 
 renderDevices();
