@@ -13,12 +13,28 @@ WiFiUDP UDP;
 WakeOnLan WOL(UDP);
 AsyncWebServer server(80);
 
+// Global SSE source for status updates
+AsyncEventSource events("/events");
+
 bool sending = false;
 int currentIndex = -1;
 int packetsSent = 0;
 unsigned long lastSend = 0;
 const int interval = 2000; //ms
 const int maxPackets = 5;
+
+// Helper that broadcasts current status via SSE
+void sendStatus(){
+    JsonDocument resp;
+    resp["sending"] = sending;
+    resp["currentIndex"] = currentIndex;
+    resp["packetsSent"] = packetsSent;
+    resp["lastSend"] = lastSend;
+
+    String output;
+    serializeJson(resp, output);
+    events.send(output, "status");
+}
 
 void wakePC(int index) {
     Serial.print("Wake avviato da web per ");
@@ -32,6 +48,9 @@ void wakePC(int index) {
     packetsSent = 0;
     sending = true;
     lastSend = millis();
+
+    // Broadcast new status via SSE
+    sendStatus();
 }
 
 void setup() {
@@ -118,6 +137,8 @@ void setup() {
         return request->send(200, "application/json", output);
     });
 
+    // Register SSE endpoint
+    server.addHandler(&events);
     server.begin();
 }
 
@@ -129,9 +150,14 @@ void loop() {
         WOL.sendMagicPacket(MACAddress[currentIndex], WAKEONLAN_PORT);
         lastSend = millis();
 
+        // Broadcast status after each packet
+        sendStatus();
+
         if (packetsSent >= maxPackets) {
             sending = false;
             Serial.println("Terminato");
+            // Final broadcast when operation ends
+            sendStatus();
         }
     }
 }

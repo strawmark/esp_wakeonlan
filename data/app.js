@@ -40,8 +40,13 @@ async function updateStatus(){
     const data = await res.json();  
     const statusElement = document.getElementById('status');
     
-    statusElement.textContent = `Status: ${data.sending?'invio':'pronto'} (pacchetto ${data.packetsSent})`;
-    statusElement.className = data.sending?'sending':'idle';
+    if(!data.sending){
+      statusElement.textContent = `Status: pronto`
+      statusElement.className = 'idle';
+    } else {
+      statusElement.textContent = `Status: inviando pacchetto ${data.packetsSent} a ${devices[data.currentIndex].name}`;
+      statusElement.className = 'sending';
+    }   
 
   } catch(e) {
     console.error(e);
