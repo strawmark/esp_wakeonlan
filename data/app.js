@@ -31,6 +31,21 @@ async function wakePC(index){
   } catch(e) {console.error(e);} 
 }
 
+// SSE listener – updates UI in real time
+const evtSource = new EventSource('/events');
+evtSource.addEventListener('status', event => {
+    const data = JSON.parse(event.data);
+    const statusElement = document.getElementById('status');
+
+    if (!data.sending) {
+        statusElement.textContent = 'Status: pronto';
+        statusElement.className = 'idle';
+    } else {
+        statusElement.textContent = `Status: inviando pacchetto a ${devices[data.currentIndex].name}`;
+        statusElement.className = 'sending';
+    }
+});
+
 async function updateStatus(){
   try{
     const res = await fetch('/api/status');
@@ -44,7 +59,7 @@ async function updateStatus(){
       statusElement.textContent = `Status: pronto`
       statusElement.className = 'idle';
     } else {
-      statusElement.textContent = `Status: inviando pacchetto ${data.packetsSent} a ${devices[data.currentIndex].name}`;
+      statusElement.textContent = `Status: inviando pacchetto a ${devices[data.currentIndex].name}`;
       statusElement.className = 'sending';
     }   
 
@@ -54,4 +69,4 @@ async function updateStatus(){
 }
 
 renderDevices();
-setInterval(updateStatus,2000);
+//setInterval(updateStatus,2000);

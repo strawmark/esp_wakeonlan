@@ -12,8 +12,6 @@
 WiFiUDP UDP;
 WakeOnLan WOL(UDP);
 AsyncWebServer server(80);
-
-// Global SSE source for status updates
 AsyncEventSource events("/events");
 
 bool sending = false;
@@ -38,7 +36,7 @@ void sendStatus(){
 
 void wakePC(int index) {
     Serial.print("Wake avviato da web per ");
-    Serial.println(MACAddress[index]);
+    Serial.println(WOL_MACAddress[index]);
 
     WOL.setRepeat(3, 100);
     WOL.calculateBroadcastAddress(WiFi.localIP(), WiFi.subnetMask());
@@ -71,7 +69,7 @@ void setup() {
     Serial.println(WiFi.localIP());
 
     // Server routes
-    server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");    // Serve index.html for any unknown path (SPA fallback)
+    server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");    // Serve index.html for any unknown path
     server.onNotFound([](AsyncWebServerRequest *request) {
         File f = LittleFS.open("/index.html", "r");
         if (!f) {
@@ -111,7 +109,7 @@ void setup() {
             
             int device_index = doc["device"] | -1; // Treat missing device key as an invalid device value
 
-            if (device_index < 0 || device_index >= sizeof(MACAddress) / sizeof(MACAddress[0])) {
+            if (device_index < 0 || device_index >= sizeof(WOL_MACAddress) / sizeof(WOL_MACAddress[0])) {
                 return request->send(400, "application/json", "{\"error\":\"Invalid device index or device parameter not found\"}");
             }
 
@@ -145,9 +143,9 @@ void setup() {
 void loop() {
     // Non blocking packets management
     if (sending && millis() - lastSend >= interval) {
-        packetsSent++;
+        ++packetsSent;
         Serial.printf("Mando pacchetto %d\n", packetsSent);
-        WOL.sendMagicPacket(MACAddress[currentIndex], WAKEONLAN_PORT);
+        WOL.sendMagicPacket(WOL_MACAddress[currentIndex], WAKEONLAN_PORT);
         lastSend = millis();
 
         // Broadcast status after each packet
@@ -156,7 +154,6 @@ void loop() {
         if (packetsSent >= maxPackets) {
             sending = false;
             Serial.println("Terminato");
-            // Final broadcast when operation ends
             sendStatus();
         }
     }

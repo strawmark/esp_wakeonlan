@@ -10,7 +10,7 @@
 
 #define WAKEONLAN_PORT 9
 
-const char* MACAddress[] = {
+const char* WOL_MACAddress[] = {
   "00:00:00:00:00:00", // (0)
   "00:00:00:00:00:00", // (1)
   "00:00:00:00:00:00", // (2)
