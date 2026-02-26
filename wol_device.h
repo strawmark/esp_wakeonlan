@@ -1,6 +1,7 @@
 // Device structure definition
 
 typedef struct{
-    const char* name;
-    const char* mac;
+    int index;
+    String name;
+    String mac;
 } Device;

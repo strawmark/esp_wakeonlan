@@ -21,6 +21,38 @@ unsigned long lastSend = 0;
 const int interval = 2000; //ms
 const int maxPackets = 5;
 
+std::vector<Device> devices;
+
+void loadDevicesFromFS() {
+    File f = LittleFS.open("/devices.json", "r");
+    
+    if (!f) {
+        Serial.println("devices.json: file non trovato");
+        return;
+    }
+    
+    JsonDocument doc;
+    DeserializationError err = deserializeJson(doc, f);
+    f.close();
+
+    if (err){
+        Serial.println("devices.json: errore di parsing");
+        return;
+    }
+
+    devices.clear();
+
+    JsonArray arr = doc.as<JsonArray>();
+    for (JsonObject obj : arr) {
+        Device device;
+        device.index = obj["index"].as<int>();
+        device.name = obj["name"].as<String>();
+        device.mac = obj["mac"].as<String>();
+        devices.push_back(device);
+    }
+
+    Serial.printf("Caricati %d dispositivi da devices.json\n", (int)devices.size());
+}
 
 // SSE broadcast function
 void sendStatus(){
@@ -53,13 +85,16 @@ void wakePC(int index) {
 }
 
 void setup() {
+    Serial.begin(115200);
+
     // Mount LittleFS
     if (!LittleFS.begin()) {
         Serial.println("LittleFS non trovato, esegui l'upload dei file e riprova");
         return;
     }
 
-    Serial.begin(115200);
+    loadDevicesFromFS();
+    
     WiFi.begin(SSID, NET_PASSWORD);
     while (WiFi.status() != WL_CONNECTED) {}
     
@@ -71,6 +106,7 @@ void setup() {
 
     // Server routes
     server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");    // Serve index.html for any unknown path
+
     server.onNotFound([](AsyncWebServerRequest *request) {
         File f = LittleFS.open("/index.html", "r");
         if (!f) {
@@ -110,7 +146,7 @@ void setup() {
             
             int device_index = doc["device"] | -1; // Treat missing device key as an invalid device value
 
-            if (device_index < 0 || device_index >= sizeof(devices) / sizeof(devices[0])) {
+            if (device_index < 0 || device_index >= (int)devices.size()) {
                 return request->send(400, "application/json", "{\"error\":\"Invalid device index or device parameter not found\"}");
             }
 
@@ -124,34 +160,34 @@ void setup() {
         }
     });
 
-// REST API: Status
-  server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest *request) {
-      JsonDocument resp;
-      resp["sending"] = sending;
-      resp["currentIndex"] = currentIndex;
-      resp["packetsSent"] = packetsSent;
-      resp["lastSend"] = lastSend;
-      String output;
-      serializeJson(resp, output);
-      return request->send(200, "application/json", output);
-  });
+    // REST API: Status
+    server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest *request) {
+        JsonDocument resp;
+        resp["sending"] = sending;
+        resp["currentIndex"] = currentIndex;
+        resp["packetsSent"] = packetsSent;
+        resp["lastSend"] = lastSend;
+        String output;
+        serializeJson(resp, output);
+        return request->send(200, "application/json", output);
+    });
 
-  // REST API: Devices list
-  server.on("/api/devices", HTTP_GET, [](AsyncWebServerRequest *request) {
-      DynamicJsonDocument doc(200);
-      JsonArray arr = doc.createNestedArray();
-      for (int i=0; i<sizeof(devices)/sizeof(devices[0]); ++i){
-          JsonObject obj = arr.createNestedObject();
-          obj["index"] = i;
-          obj["name"] = devices[i].name;
-          //obj["mac"] = devices[i].mac;  
-      }
-      String output;
-      serializeJson(doc, output);
-      return request->send(200, "application/json", output);
-  });
+    // REST API: Devices list
+    server.on("/api/devices", HTTP_GET, [](AsyncWebServerRequest *request) {
+        DynamicJsonDocument doc(200);
+        JsonArray arr = doc.createNestedArray();
+        for (int i=0; i < (int)devices.size(); ++i){
+            JsonObject obj = arr.createNestedObject();
+            obj["index"] = i;
+            obj["name"] = devices[i].name;
+            obj["mac"] = devices[i].mac;  
+        }
+        String output;
+        serializeJson(doc, output);
+        return request->send(200, "application/json", output);
+    });
 
-  // Register SSE endpoint
+    // Register SSE endpoint
     server.addHandler(&events);
     server.begin();
 }
@@ -160,7 +196,12 @@ void loop() {
     // Non blocking packets management
     if (sending && millis() - lastSend >= interval) {
         ++packetsSent;
-        Serial.printf("Mando pacchetto %d\n", packetsSent);
+
+        Serial.print("Mando pacchetto ");
+        Serial.print(packetsSent);
+        Serial.print(" verso ");
+        Serial.println(devices[currentIndex].mac);
+        
         WOL.sendMagicPacket(devices[currentIndex].mac, WAKEONLAN_PORT);
         lastSend = millis();
 
