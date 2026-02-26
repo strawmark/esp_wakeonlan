@@ -1,20 +1,15 @@
+#include "wol_device.h"
+
 // WiFi connection setup
+
 #define SSID ""
 #define NET_PASSWORD ""
 
-// ESP32 server access setup
-#define USERNAME ""
-#define ESP_PASSWORD ""
-
 // Wake On LAN devices
 
-#define WAKEONLAN_PORT 9
-
-const char* WOL_MACAddress[] = {
-  "00:00:00:00:00:00", // (0)
-  "00:00:00:00:00:00", // (1)
-  "00:00:00:00:00:00", // (2)
-  "00:00:00:00:00:00" // (3)
+const Device devices[] = {
+    {"Device1","00:00:00:00:00:00"},
+    {"Device2","00:00:00:00:00:00"}
 };
 
-const char* root = "/wakeonlan/";
+#define WAKEONLAN_PORT 9

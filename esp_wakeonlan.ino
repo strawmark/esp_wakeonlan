@@ -21,7 +21,8 @@ unsigned long lastSend = 0;
 const int interval = 2000; //ms
 const int maxPackets = 5;
 
-// Helper that broadcasts current status via SSE
+
+// SSE broadcast function
 void sendStatus(){
     JsonDocument resp;
     resp["sending"] = sending;
@@ -36,7 +37,7 @@ void sendStatus(){
 
 void wakePC(int index) {
     Serial.print("Wake avviato da web per ");
-    Serial.println(WOL_MACAddress[index]);
+    Serial.println(devices[index].name);
 
     WOL.setRepeat(3, 100);
     WOL.calculateBroadcastAddress(WiFi.localIP(), WiFi.subnetMask());
@@ -109,7 +110,7 @@ void setup() {
             
             int device_index = doc["device"] | -1; // Treat missing device key as an invalid device value
 
-            if (device_index < 0 || device_index >= sizeof(WOL_MACAddress) / sizeof(WOL_MACAddress[0])) {
+            if (device_index < 0 || device_index >= sizeof(devices) / sizeof(devices[0])) {
                 return request->send(400, "application/json", "{\"error\":\"Invalid device index or device parameter not found\"}");
             }
 
@@ -123,19 +124,34 @@ void setup() {
         }
     });
 
-    // REST API: Status
-    server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest *request) {
-        JsonDocument resp;
-        resp["sending"] = sending;
-        resp["currentIndex"] = currentIndex;
-        resp["packetsSent"] = packetsSent;
-        resp["lastSend"] = lastSend;
-        String output;
-        serializeJson(resp, output);
-        return request->send(200, "application/json", output);
-    });
+// REST API: Status
+  server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest *request) {
+      JsonDocument resp;
+      resp["sending"] = sending;
+      resp["currentIndex"] = currentIndex;
+      resp["packetsSent"] = packetsSent;
+      resp["lastSend"] = lastSend;
+      String output;
+      serializeJson(resp, output);
+      return request->send(200, "application/json", output);
+  });
 
-    // Register SSE endpoint
+  // REST API: Devices list
+  server.on("/api/devices", HTTP_GET, [](AsyncWebServerRequest *request) {
+      DynamicJsonDocument doc(200);
+      JsonArray arr = doc.createNestedArray();
+      for (int i=0; i<sizeof(devices)/sizeof(devices[0]); ++i){
+          JsonObject obj = arr.createNestedObject();
+          obj["index"] = i;
+          obj["name"] = devices[i].name;
+          //obj["mac"] = devices[i].mac;  
+      }
+      String output;
+      serializeJson(doc, output);
+      return request->send(200, "application/json", output);
+  });
+
+  // Register SSE endpoint
     server.addHandler(&events);
     server.begin();
 }
@@ -145,7 +161,7 @@ void loop() {
     if (sending && millis() - lastSend >= interval) {
         ++packetsSent;
         Serial.printf("Mando pacchetto %d\n", packetsSent);
-        WOL.sendMagicPacket(WOL_MACAddress[currentIndex], WAKEONLAN_PORT);
+        WOL.sendMagicPacket(devices[currentIndex].mac, WAKEONLAN_PORT);
         lastSend = millis();
 
         // Broadcast status after each packet

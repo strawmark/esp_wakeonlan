@@ -45,9 +45,8 @@ ul {
   display: grid;
   grid-template-columns: auto auto;
   list-style: none;
-  margin: 0;
+  margin: 10rem 0;
   padding: 0;
-  margin-bottom: 2rem;
   justify-content: center;
 }
 
@@ -59,7 +58,7 @@ ul {
 }
 
 button {
-  margin: 1rem;
+  margin: 1rem 1rem 0.2rem 1rem;
   padding: 1.5em;
   width: 15rem;
   font-size: 1rem;
@@ -76,7 +75,7 @@ button:hover {
 }
 
 footer {
-    position: fixed;
+  position: fixed;
   bottom: 0;
   width: 100%;
   text-align: center;
@@ -88,6 +87,9 @@ footer {
 @media (max-width: 48rem) {
   footer {
     display: none;
+  }
+  ul {
+    margin: 5rem 0;
   }
 }
 
@@ -101,4 +103,8 @@ footer {
 
 .sending{
     color: green
+}
+
+.error{
+    color: red;
 }

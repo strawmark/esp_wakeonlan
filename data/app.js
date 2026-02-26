@@ -1,21 +1,42 @@
-const devices = [
-  {index:0,name:"Glottis"},
-  {index:1,name:"BlueCasket"},
-  {index:2,name:"Guybrush"},
-  {index:3,name:"Myu59"}
-];
+let devices = [];
 
-function renderDevices(){
-  const ul=document.getElementById('devices');
-  ul.innerHTML='';
-  devices.forEach(d=>{
-    const li=document.createElement('li');
-    const btn=document.createElement('button');
-    btn.textContent=`Accendi PC ${d.name}`;
-    btn.onclick=()=>wakePC(d.index);
-    li.appendChild(btn);
+async function renderDevices(){
+  try{
+    await loadDevices();
+    console.log(devices);
+    const ul=document.getElementById('devicesList');
+    ul.innerHTML='';
+
+    if (devices.length === 0) {
+      const p = document.createElement('p');
+      p.className = 'error';
+      const li = document.createElement('li');
+      p.textContent = 'Nessun dispositivo configurato';
+      li.appendChild(p);
+      ul.appendChild(li);
+      return;
+    }
+
+    // Populate device list
+    devices.forEach(d=>{
+      const li=document.createElement('li');
+      const btn=document.createElement('button');
+      btn.textContent=`Accendi PC ${d.name}`;
+      btn.onclick=()=>wakePC(d.index);
+      li.appendChild(btn);
+      ul.appendChild(li);
+    });
+
+  } catch(e) {
+    const p = document.createElement('p');
+    const li = document.createElement('li');
+    p.textContent = 'Errore';
+    li.appendChild(p);
     ul.appendChild(li);
-  });
+    console.error(e);
+  }
+
+  updateStatus();
 }
 
 async function wakePC(index){
@@ -36,15 +57,9 @@ const evtSource = new EventSource('/events');
 evtSource.addEventListener('status', event => {
     const data = JSON.parse(event.data);
     const statusElement = document.getElementById('status');
-
-    if (!data.sending) {
-        statusElement.textContent = 'Status: pronto';
-        statusElement.className = 'idle';
-    } else {
-        statusElement.textContent = `Status: inviando pacchetto a ${devices[data.currentIndex].name}`;
-        statusElement.className = 'sending';
-    }
-});
+    updateFooterStatus(data);
+  }
+);
 
 async function updateStatus(){
   try{
@@ -53,20 +68,32 @@ async function updateStatus(){
     if(!res.ok) throw new Error('Error');
   
     const data = await res.json();  
-    const statusElement = document.getElementById('status');
-    
-    if(!data.sending){
-      statusElement.textContent = `Status: pronto`
-      statusElement.className = 'idle';
-    } else {
-      statusElement.textContent = `Status: inviando pacchetto a ${devices[data.currentIndex].name}`;
-      statusElement.className = 'sending';
-    }   
+    updateFooterStatus(data);
 
   } catch(e) {
     console.error(e);
   } 
 }
 
+async function loadDevices(){
+  try{
+    const res = await fetch('/api/devices');
+    if(!res.ok) throw new Error('Failed to load devices');
+    const data = await res.json();
+    devices = data[0]; //TODO: fix, the server response is an array of arrays, should be an array
+    }catch(e){console.error(e);}
+}
+
+function updateFooterStatus(status){
+  const statusElement = document.getElementById('status');
+    
+  if(!status.sending){
+    statusElement.textContent = `Status: pronto`
+    statusElement.className = 'idle';
+  } else {
+    statusElement.textContent = `Status: inviando pacchetto a ${devices[status.currentIndex].name}`;
+    statusElement.className = 'sending';
+  }
+}
+
 renderDevices();
-//setInterval(updateStatus,2000);
