@@ -6,8 +6,7 @@
 #include <WakeOnLan.h>
 #include <WiFiUdp.h>
 
-
-#include "config.h"
+#include "rest_api.h"
 
 WiFiUDP UDP;
 WakeOnLan WOL(UDP);
@@ -52,6 +51,32 @@ void loadDevicesFromFS() {
     }
 
     Serial.printf("Caricati %d dispositivi da devices.json\n", (int)devices.size());
+}
+
+void saveDevicesToFS() {
+    JsonDocument doc;
+    JsonArray arr = doc.to<JsonArray>();  
+
+    for (const Device& dev : devices) {
+        JsonObject obj = arr.add<JsonObject>();
+        obj["index"] = dev.index;
+        obj["name"] = dev.name; 
+        obj["mac"] = dev.mac;
+    }   
+
+    File f = LittleFS.open("/devices.json", "w");
+
+    if (!f) {
+        Serial.println("devices.json: impossibile scrivere il file");
+        return;
+    }
+
+    serializeJson(doc, f);
+    f.close();
+    
+    Serial.println("Dati salvati");
+
+    loadDevicesFromFS(); // Refresh device list
 }
 
 // SSE broadcast function
@@ -103,18 +128,8 @@ void setup() {
     Serial.println(SSID);
     Serial.print("IP: ");
     Serial.println(WiFi.localIP());
-
-    // Server routes
-    server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");    // Serve index.html for any unknown path
-
-    server.onNotFound([](AsyncWebServerRequest *request) {
-        File f = LittleFS.open("/index.html", "r");
-        if (!f) {
-            request->send(404, "text/plain", "File not found");
-            return;
-        }
-        request->send(LittleFS, "/index.html", "text/html");
-    });
+    
+    setupRestAPI(server);
 
     // Index page route
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -124,69 +139,20 @@ void setup() {
             return;
         }
         request->send(LittleFS, "/index.html", "text/html");
-    });
 
-    // REST API: Wake on LAN
-    server.on("/api/wake",HTTP_POST,[](AsyncWebServerRequest *request){},nullptr,[](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-        static String body; // body container
-        
-        if (index == 0) {
-            body.clear(); // Clear before appending the new HTTP Request
+    });
+    
+    server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");    // Serve index.html for any unknown path
+    
+    server.onNotFound([](AsyncWebServerRequest *request) {
+        File f = LittleFS.open("/index.html", "r");
+        if (!f) {
+            request->send(404, "text/plain", "File not found");
+            return;
         }
-        
-        body += (char*)data;
-
-        if (index + len == total) {
-            DynamicJsonDocument doc(200);
-            DeserializationError err = deserializeJson(doc, body.c_str());
-
-            if (err) {
-                return request->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
-            }
-            
-            int device_index = doc["device"] | -1; // Treat missing device key as an invalid device value
-
-            if (device_index < 0 || device_index >= (int)devices.size()) {
-                return request->send(400, "application/json", "{\"error\":\"Invalid device index or device parameter not found\"}");
-            }
-
-            wakePC(device_index);
-            
-            JsonObject resp = doc.to<JsonObject>();
-            resp["status"] = "ok";
-            String output;
-            serializeJson(resp, output);
-            request->send(200, "application/json", output);
-        }
+        request->send(LittleFS, "/index.html", "text/html");
     });
-
-    // REST API: Status
-    server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest *request) {
-        JsonDocument resp;
-        resp["sending"] = sending;
-        resp["currentIndex"] = currentIndex;
-        resp["packetsSent"] = packetsSent;
-        resp["lastSend"] = lastSend;
-        String output;
-        serializeJson(resp, output);
-        return request->send(200, "application/json", output);
-    });
-
-    // REST API: Devices list
-    server.on("/api/devices", HTTP_GET, [](AsyncWebServerRequest *request) {
-        DynamicJsonDocument doc(200);
-        JsonArray arr = doc.createNestedArray();
-        for (int i=0; i < (int)devices.size(); ++i){
-            JsonObject obj = arr.createNestedObject();
-            obj["index"] = i;
-            obj["name"] = devices[i].name;
-            obj["mac"] = devices[i].mac;  
-        }
-        String output;
-        serializeJson(doc, output);
-        return request->send(200, "application/json", output);
-    });
-
+    
     // Register SSE endpoint
     server.addHandler(&events);
     server.begin();

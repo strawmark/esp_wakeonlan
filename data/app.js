@@ -1,10 +1,10 @@
 let devices = [];
 
 async function renderDevices(){
-  try{
+  const ul = document.getElementById('devicesList');
+  try {
     await loadDevices();
     console.log(devices);
-    const ul=document.getElementById('devicesList');
     ul.innerHTML='';
 
     if (devices.length === 0) {
@@ -40,7 +40,7 @@ async function renderDevices(){
 }
 
 async function wakePC(index){
-  try{
+  try {
     const res=await fetch('/api/wake',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
@@ -52,18 +52,20 @@ async function wakePC(index){
   } catch(e) {console.error(e);} 
 }
 
-// SSE listener – updates UI in real time
+// SSE listeners
 const evtSource = new EventSource('/events');
+
 evtSource.addEventListener('status', event => {
-    const data = JSON.parse(event.data);
-    const statusElement = document.getElementById('status');
-    updateFooterStatus(data);
-  }
-);
+  const data = JSON.parse(event.data);
+  const statusElement = document.getElementById('status');
+  updateFooterStatus(data);
+});
+
+evtSource.addEventListener('devices-changed', renderDevices);
 
 async function updateStatus(){
-  try{
-    const res = await fetch('/api/status');
+  try {
+    const res = await fetch('/api/wake/status');
   
     if(!res.ok) throw new Error('Error');
   
@@ -80,7 +82,7 @@ async function loadDevices(){
     const res = await fetch('/api/devices');
     if(!res.ok) throw new Error('Failed to load devices');
     const data = await res.json();
-    devices = data[0]; //TODO: fix, the server response is an array of arrays, should be an array
+    devices = data;
     }catch(e){console.error(e);}
 }
 

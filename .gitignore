@@ -1,2 +1,4 @@
 config.h
 mklittlefs.bin
+.vscode
+.continue
