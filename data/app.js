@@ -4,7 +4,6 @@ async function renderDevices(){
   const ul = document.getElementById('devicesList');
   try {
     await loadDevices();
-    console.log(devices);
     ul.innerHTML='';
 
     if (devices.length === 0) {
@@ -41,7 +40,7 @@ async function renderDevices(){
 
 async function wakePC(index){
   try {
-    const res=await fetch('/api/wake',{
+    const res=await fetch(`/api/devices/${index}/wake`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({device:index})
@@ -52,17 +51,6 @@ async function wakePC(index){
   } catch(e) {console.error(e);} 
 }
 
-// SSE listeners
-const evtSource = new EventSource('/events');
-
-evtSource.addEventListener('status', event => {
-  const data = JSON.parse(event.data);
-  const statusElement = document.getElementById('status');
-  updateFooterStatus(data);
-});
-
-evtSource.addEventListener('devices-changed', renderDevices);
-
 async function updateStatus(){
   try {
     const res = await fetch('/api/wake/status');
@@ -72,18 +60,19 @@ async function updateStatus(){
     const data = await res.json();  
     updateFooterStatus(data);
 
-  } catch(e) {
-    console.error(e);
-  } 
+  } catch(e) {console.error(e);} 
 }
 
 async function loadDevices(){
-  try{
+  try {
     const res = await fetch('/api/devices');
+    
     if(!res.ok) throw new Error('Failed to load devices');
+    
     const data = await res.json();
     devices = data;
-    }catch(e){console.error(e);}
+    
+  } catch(e) {console.error(e);}
 }
 
 function updateFooterStatus(status){
@@ -97,5 +86,25 @@ function updateFooterStatus(status){
     statusElement.className = 'sending';
   }
 }
+//TODO
+const urlParams = new URLSearchParams(window.location.search);
+const deviceName = urlParams.get('device-name');
+const originalUrl = urlParams.get('url');
+  
+if(originalUrl){
 
-renderDevices();
+}
+
+if(deviceName){
+
+}
+
+// SSE listeners
+const evtSource = new EventSource('/events');
+
+evtSource.addEventListener('status', event => updateFooterStatus(JSON.parse(event.data)));
+
+evtSource.addEventListener('devices-changed', renderDevices);
+
+// Initial rendering
+renderDevices(); 

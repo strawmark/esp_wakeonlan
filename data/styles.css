@@ -31,7 +31,10 @@ header {
   font-weight: bold;
   font-size: 2rem;
 }
-
+a {
+  text-decoration: none;
+  color: var(--header-txt);
+}
 main {
   height: 80vh;
   display: flex;
@@ -68,10 +71,18 @@ button {
   cursor: pointer;
   color: white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 
 button:hover {
   background: #0056b3;
+}
+
+header button {
+  padding: 0.5rem;
+  width: 20rem;
 }
 
 footer {

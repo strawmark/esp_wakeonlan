@@ -15,40 +15,25 @@ extern void saveDevicesToFS();
 
 extern AsyncEventSource events;
 
+int getValidIndex(String idStr, size_t maxLimit) {
+    if (idStr.length() == 0) return -1;
+    
+    for (char c : idStr) {
+        if (!isDigit(c)) return -1;
+    }
+    
+    int i = idStr.toInt();
+    if (i >= 0 && (size_t)i < maxLimit) {
+        return i;
+    }
+    return -1;
+}
+
 // REST API routes
 
 void setupRestAPI(AsyncWebServer &server) {
     
-    // POST /api/wake : Wake a device
-    server.on("/api/wake", HTTP_POST,[](AsyncWebServerRequest *request){},nullptr,[](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-        static String body;
-
-        if (index == 0){body.clear();} // Reset body on new request
-
-        body += (char*)data;
-
-        if (index + len == total) {
-
-            JsonDocument doc;
-            if (deserializeJson(doc, body)) {
-                request->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
-                return;
-            }
-
-            int device_index = doc["device"] | -1;  // Treat missing device key as an invalid device value
-
-            if (device_index < 0 || device_index >= (int)devices.size()) {
-                request->send(400, "application/json", "{\"error\":\"Invalid device index or device parameter not found\"}");
-                return;
-            }
-
-            wakePC(device_index);
-
-            request->send(200, "application/json", "{\"status\":\"ok\"}");
-        }
-    });
-
-    // GET /api/wake/status : Get status of the sending process
+    //Get status of the sending process
     server.on("/api/wake/status", HTTP_GET,[](AsyncWebServerRequest *request) {
         String output;
         JsonDocument resp;
@@ -58,59 +43,116 @@ void setupRestAPI(AsyncWebServer &server) {
         resp["packetsSent"] = packetsSent;
         resp["lastSend"] = lastSend;
         serializeJson(resp, output);
-
+        
         request->send(200, "application/json", output);
     });
 
-    // GET /api/devices/ : Get devices list
-    server.on("/api/devices", HTTP_GET,[](AsyncWebServerRequest *request) {
-        String output;    
-        JsonDocument doc;
-        JsonArray arr = doc.to<JsonArray>();
+    // Delete device from the list
+    server.on("/api/devices*", HTTP_DELETE,[](AsyncWebServerRequest *request) {
+        String idStr = request->url().substring(13);
+        int i = getValidIndex(idStr, devices.size());
 
-        for (int i = 0; i < (int)devices.size(); i++) {
-            JsonObject obj = arr.add<JsonObject>();
-            obj["index"] = i;
-            obj["name"] = devices[i].name;
-            obj["mac"] = devices[i].mac;
+        if (i == -1) {
+            request->send(404, "application/json", "{\"error\":\"device not found\"}");
+            return;
         }
-        serializeJson(doc, output);
 
-        request->send(200, "application/json", output);
+        devices.erase(devices.begin() + i);
+        saveDevicesToFS();
+        events.send("update", "devices-changed", millis());
+
+        request->send(200, "application/json", "{\"status\":\"success\", \"index\":" + String(i) + "}");
     });
+    
+    // POST /api/devices
+    server.on("/api/devices*", HTTP_POST, [](AsyncWebServerRequest *request) {
+        // Requests without body (/wake)
+        String url = request->url();
 
-    // POST /api/devices : Add a new device
-    server.on("/api/devices", HTTP_POST,[](AsyncWebServerRequest *request){},nullptr,[](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-        static String body;
-        JsonDocument doc;
-        if (index == 0){body.clear();} // Reset body on new request
+        if (url.endsWith("/wake")) {
+            String idStr = url.substring(13, url.length() - 5);
+            int i = getValidIndex(idStr, devices.size());
 
-        body += (char*)data;
-
-        if (index + len == total) {
-
-            if (deserializeJson(doc, body)) {
-                request->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+            if (i == -1) {
+                request->send(404, "application/json", "{\"error\":\"device not found\"}");
                 return;
             }
 
-            if (!doc.containsKey("index") || !doc.containsKey("name") || !doc.containsKey("mac")) {
-                request->send(400, "application/json", "{\"error\":\"Missing fields\"}");
+            wakePC(i);
+            request->send(200, "application/json", "{\"status\":\"success\", \"id\":" + String(i) + "}");
+        }
+        
+    }, 
+    nullptr, // Other POST requests on /api/devices/* with body
+    [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+        
+        String url = request->url();
+
+        // Only process if it's the root path (adding a device)
+        if (url == "/api/devices" || url == "/api/devices/") {
+            static String body;
+            if (index == 0) { body.clear(); }
+            body += (char*)data;
+
+            if (index + len == total) {
+                JsonDocument doc;
+                if (deserializeJson(doc, body)) {
+                    request->send(400, "application/json", "{\"error\":\"invalid JSON\"}");
+                    return;
+                }
+
+                if (!doc.containsKey("name") || !doc.containsKey("mac")) {
+                    request->send(400, "application/json", "{\"error\":\"missing fields\"}");
+                    return;
+                }
+                
+                Device newDev;
+                newDev.index = devices.size(); //doc["index"].as<int>();
+                newDev.name = doc["name"].as<String>();
+                newDev.mac = doc["mac"].as<String>();
+                devices.push_back(newDev);
+                saveDevicesToFS();
+                
+                events.send("update", "devices-changed", millis());
+                request->send(201, "application/json", "{\"status\":\"success\"}");
+            }
+        }
+    });
+    
+    server.on("/api/devices*", HTTP_GET, [](AsyncWebServerRequest *request) {
+        String url = request->url();
+
+        if (url == "/api/devices" || url == "/api/devices/"){  // root url: get device list
+            JsonDocument doc;
+            JsonArray arr = doc.to<JsonArray>();
+
+            for (size_t i = 0; i < devices.size(); i++) {
+                JsonObject obj = arr.add<JsonObject>();
+                obj["index"] = (int)i;
+                obj["name"] = devices[i].name;
+                obj["mac"] = devices[i].mac;
+            }
+
+            String output;
+            serializeJson(doc, output);
+            request->send(200, "application/json", output);
+            return;
+        } else {
+            String idStr = url.substring(13);
+            int i = getValidIndex(idStr, devices.size());
+
+            if (i == -1) {
+                request->send(404, "application/json", "{\"error\":\"device not found\"}");
                 return;
             }
-            
-            // Add the device to the list and save it permanently
-            Device newDev;
-            newDev.index = doc["index"].as<int>();
-            newDev.name = doc["name"].as<String>();
-            newDev.mac = doc["mac"].as<String>();
-            devices.push_back(newDev);
-            saveDevicesToFS();
 
-            // Send SSE Event to prompt a list refresh
-            events.send("update", "devices-changed", millis());
-
-            request->send(201, "application/json", "{\"status\":\"success\"}");
+            JsonDocument doc;
+            doc["index"] = i;
+            doc["name"] = devices[i].name;
+            doc["mac"] = devices[i].mac;
+            String output;
+            serializeJson(doc, output);
+            request->send(200, "application/json", output);
         }
     });
 }

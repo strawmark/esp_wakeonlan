@@ -5,11 +5,4 @@
 #define SSID ""
 #define NET_PASSWORD ""
 
-// Wake On LAN devices
-
-const Device devices[] = {
-    {"Device1","00:00:00:00:00:00"},
-    {"Device2","00:00:00:00:00:00"}
-};
-
 #define WAKEONLAN_PORT 9
