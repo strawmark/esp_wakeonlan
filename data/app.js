@@ -1,4 +1,15 @@
+const urlParams = new URLSearchParams(window.location.search);
+const deviceName = urlParams.get('device-name');
+const originalUrl = urlParams.get('url');
+
 let devices = [];
+
+if(originalUrl){
+  const returnButton = document.getElementById("return");
+  returnButton.innerHTML = `Riprova a raggiungere <strong>${originalUrl.split("/")[2]}</strong>`;
+  returnButton.parentElement.style.display = 'inline';
+  returnButton.setAttribute("href", originalUrl);
+}
 
 async function renderDevices(){
   const ul = document.getElementById('devicesList');
@@ -6,18 +17,23 @@ async function renderDevices(){
     await loadDevices();
     ul.innerHTML='';
 
-    if (devices.length === 0) {
+    let displayDevices = [...devices]; 
+    if (deviceName) {
+      displayDevices = displayDevices.filter(d => d.name === deviceName);
+    }
+
+    if (displayDevices.length === 0) {
       const p = document.createElement('p');
       p.className = 'error';
       const li = document.createElement('li');
-      p.textContent = 'Nessun dispositivo configurato';
-      li.appendChild(p);
+      p.textContent = deviceName ? 'Dispositivo non presente' : 'Nessun dispositivo configurato';      li.appendChild(p);
       ul.appendChild(li);
       return;
     }
 
     // Populate device list
-    devices.forEach(d=>{
+
+    displayDevices.forEach(d=>{
       const li=document.createElement('li');
       const btn=document.createElement('button');
       btn.textContent=`Accendi PC ${d.name}`;
@@ -108,29 +124,28 @@ function updateFooterStatus(status){
     statusElement.textContent = `Status: pronto`
     statusElement.className = 'idle';
   } else {
-    statusElement.textContent = `Status: inviando pacchetto a ${devices[status.currentIndex].name}`;
+    const targetDevice = devices.find(d => d.index === status.currentIndex);
+    console.log(targetDevice);
+    statusElement.textContent = `Status: invio segnale di wake a ${targetDevice? targetDevice.name : "dispositivo non riconosciuto"}`;
     statusElement.className = 'sending';
   }
 }
-//TODO
-const urlParams = new URLSearchParams(window.location.search);
-const deviceName = urlParams.get('device-name');
-const originalUrl = urlParams.get('url');
-  
-if(originalUrl){
-
-}
-
-if(deviceName){
-
-}
 
 // SSE listeners
-const evtSource = new EventSource('/events');
+const sseUrl = `/events?${urlParams.toString()}&t=${Date.now()}`;
+const evtSource = new EventSource(sseUrl);
+//const evtSource = new EventSource('/events');
 
 evtSource.addEventListener('status', event => updateFooterStatus(JSON.parse(event.data)));
 
 evtSource.addEventListener('devices-changed', renderDevices);
+
+evtSource.onerror = (err) => {
+  console.error("SSE Error:", err);
+  if (evtSource.readyState === EventSource.CLOSED) {
+    console.log("Connessione persa, tentativo di ripristino...");
+  }
+};
 
 // Initial rendering
 renderDevices(); 

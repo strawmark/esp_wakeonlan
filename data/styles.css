@@ -17,11 +17,18 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: Roboto, sans-serif;
+  font-family: "Space Mono", sans-serif;
   background: var(--bg);
 }
 
+a {
+  text-decoration: none;
+  color: var(--header-txt);
+}
+
 header {
+  position: fixed;
+  top: 0;
   text-align: center;
   width: 100%;
   padding: 1rem 0;
@@ -31,39 +38,26 @@ header {
   font-weight: bold;
   font-size: 2rem;
 }
-a {
-  text-decoration: none;
-  color: var(--header-txt);
+
+#status{
+  font-size: medium;
+  margin: 0.6rem 0 0 0;
 }
+
 main {
-  height: 80vh;
+  min-height: 80vh;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   text-align: center;
   align-items: center;
-  margin-bottom: 1rem;
-}
-
-ul {
-  display: grid;
-  grid-template-columns: auto auto;
-  list-style: none;
-  margin: 10rem 0;
-  padding: 0;
-  justify-content: center;
-}
-
-@media (max-width: 48rem) {
-  ul {
-    display: flex;
-    flex-direction: column;
-  }
 }
 
 button {
   margin: 1rem 1rem 0.2rem 1rem;
   padding: 1.5em;
-  width: 15rem;
+  width: 18rem;
+  font-family: "Space Mono", sans-serif;
   font-size: 1rem;
   border: 0;
   background: var(--btn-bg);
@@ -80,9 +74,37 @@ button:hover {
   background: #0056b3;
 }
 
-header button {
-  padding: 0.5rem;
-  width: 20rem;
+main div {
+  position: fixed;
+  top: 5.8rem;
+}
+
+main div button {
+  min-width: 15rem;
+  width: fit-content;
+  max-width: 25rem;
+  margin: 1.8rem 0;
+  display: none;
+}
+
+#return {
+  font-size: small;
+}
+
+ul {
+  display: grid;
+  grid-template-columns: auto auto;
+  list-style: none;
+  margin: 15rem 0;
+  padding: 0;
+  justify-content: center;
+}
+
+@media (max-width: 48rem) {
+  ul {
+    display: flex;
+    flex-direction: column;
+  }
 }
 
 footer {
@@ -102,10 +124,6 @@ footer {
   ul {
     margin: 5rem 0;
   }
-}
-
-#status{
-  margin: 0.5rem 0;
 }
 
 .idle{
