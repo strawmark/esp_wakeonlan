@@ -47,7 +47,74 @@ void setupRestAPI(AsyncWebServer &server) {
         request->send(200, "application/json", output);
     });
 
-    // Delete device from the list
+    // Replace a device on index {id} with a new device
+    server.on("/api/devices*", HTTP_PUT, [](AsyncWebServerRequest *request) {}, nullptr,[](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+        String url = request->url();
+        String idStr = url.substring(13);
+        int i = getValidIndex(idStr, devices.size());
+
+        if (i == -1) {
+            request->send(404, "application/json", "{\"error\":\"device not found\"}");
+            return;
+        }
+
+        static String body;
+        if (index == 0) { body.clear(); }
+        body += (char*)data;
+
+        if (index + len == total) {
+            JsonDocument doc;
+            if (deserializeJson(doc, body)) {
+                request->send(400, "application/json", "{\"error\":\"invalid JSON\"}");
+                return;
+            }
+
+            if (!doc.containsKey("name") || !doc.containsKey("mac")) {
+                request->send(400, "application/json", "{\"error\":\"missing fields\"}");
+                return;
+            }
+
+            devices[i].name = doc["name"].as<String>();
+            devices[i].mac = doc["mac"].as<String>();
+            saveDevicesToFS();
+
+            events.send("update", "devices-changed", millis());
+            request->send(200, "application/json", "{\"status\":\"success\", \"index\":" + String(i) + "}");
+        }
+    });
+
+    // Modify name/mac property for the device of index {id}
+    server.on("/api/devices*", HTTP_PATCH, [](AsyncWebServerRequest *request){}, nullptr, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+        String url = request->url();
+        String idStr = url.substring(13);
+        int i = getValidIndex(idStr, devices.size());
+
+        if (i == -1) {
+            request->send(404, "application/json", "{\"error\":\"device not found\"}");
+            return;
+        }
+
+        static String body;
+        if (index == 0) { body.clear(); }
+        body += (char*)data;
+
+        if (index + len == total) {
+            JsonDocument doc;
+            if (deserializeJson(doc, body)) {
+                request->send(400, "application/json", "{\"error\":\"invalid JSON\"}");
+                return;
+            }
+
+            if (doc.containsKey("name")) devices[i].name = doc["name"].as<String>();
+            if (doc.containsKey("mac")) devices[i].mac = doc["mac"].as<String>();
+            saveDevicesToFS();
+
+            events.send("update", "devices-changed", millis());
+            request->send(200, "application/json", "{\"status\":\"success\", \"index\":" + String(i) + "}");
+        }
+    });
+
+    // Delete the device of index {id}
     server.on("/api/devices*", HTTP_DELETE,[](AsyncWebServerRequest *request) {
         String idStr = request->url().substring(13);
         int i = getValidIndex(idStr, devices.size());
@@ -66,9 +133,10 @@ void setupRestAPI(AsyncWebServer &server) {
     
     // POST /api/devices
     server.on("/api/devices*", HTTP_POST, [](AsyncWebServerRequest *request) {
-        // Requests without body (/wake)
+        // POST requests without body
         String url = request->url();
 
+        // Wake the device of index {id} (/api/devices/{id}/wake)
         if (url.endsWith("/wake")) {
             String idStr = url.substring(13, url.length() - 5);
             int i = getValidIndex(idStr, devices.size());
@@ -79,16 +147,16 @@ void setupRestAPI(AsyncWebServer &server) {
             }
 
             wakePC(i);
-            request->send(200, "application/json", "{\"status\":\"success\", \"id\":" + String(i) + "}");
+            request->send(200, "application/json", "{\"status\":\"success\", \"index\":" + String(i) + "}");
         }
         
     }, 
-    nullptr, // Other POST requests on /api/devices/* with body
+    nullptr, // Other POST requests on /api/devices/*, with body
     [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
         
         String url = request->url();
 
-        // Only process if it's the root path (adding a device)
+        // Add a new device (/api/devices/ or api/devices)
         if (url == "/api/devices" || url == "/api/devices/") {
             static String body;
             if (index == 0) { body.clear(); }

@@ -51,6 +51,32 @@ async function wakePC(index){
   } catch(e) {console.error(e);} 
 }
 
+async function updateDevice(index, data){
+  try {
+    const res=await fetch(`/api/devices/${index}`, {
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(data)
+    });
+    
+    if(!res.ok) throw new Error('Error');
+    
+  } catch(e) {console.error(e);}
+}
+
+async function patchDevice(index, data){
+  try {
+    const res=await fetch(`/api/devices/${index}`, {
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(data)
+    });
+    
+    if(!res.ok) throw new Error('Error');
+    
+  } catch(e) {console.error(e);}
+}
+
 async function updateStatus(){
   try {
     const res = await fetch('/api/wake/status');
