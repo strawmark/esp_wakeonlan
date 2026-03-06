@@ -1,0 +1,12 @@
+[
+    {
+        "index": 0,
+        "name": "Office",
+        "mac": "A1:B2:C3:D4:E5:F6"
+    },
+    {
+        "index": 1,
+        "name": "Camera",
+        "mac": "A2:B3:C4:D5:E6:F7"
+    }
+]
