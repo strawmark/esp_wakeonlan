@@ -1,5 +1,4 @@
 data/devices.json
-config.h
+src/utility/config.h
 mklittlefs.bin
 .vscode
-.continue

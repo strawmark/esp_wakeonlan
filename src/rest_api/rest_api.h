@@ -3,7 +3,7 @@
 
 #include <ESPAsyncWebServer.h>
 #include <vector>
-#include "config.h"
+#include "../config.h"
 
 void setupRestAPI(AsyncWebServer &server);
 

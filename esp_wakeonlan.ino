@@ -6,7 +6,7 @@
 #include <WakeOnLan.h>
 #include <WiFiUdp.h>
 
-#include "rest_api.h"
+#include "src/rest_api/rest_api.h"
 
 WiFiUDP UDP;
 WakeOnLan WOL(UDP);

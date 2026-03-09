@@ -71,7 +71,7 @@ location / {
 - **WiFi** (built-in to Arduino ESP32)
 - **WiFiUDP** (built-in to Arduino ESP32)
 
-## Board manager e plugin
+## Board manager and plugins
 
 - **esp32** (2.0.17) by Espressif Systems
 - [LittleFS](https://github.com/earlephilhower/arduino-littlefs-upload/releases)

@@ -1,2 +1,0 @@
-csscompressor==0.9.5
-htmlmin4==0.2.15
